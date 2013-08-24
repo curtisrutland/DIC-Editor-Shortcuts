@@ -30,6 +30,8 @@ function insert(text, evt) {
     //prevent overriding copy
     if (code == 'c' && event.ctrlKey && isTextSelected())
         return true;
+    //supposedly returning false will stop the event from propagating.
+    //oh well, belts and suspenders
     evt.preventDefault();
     evt.stopPropagation();
     $tb.insertAtCaret(text);
