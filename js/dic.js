@@ -96,3 +96,5 @@ $(function () {
     ];
     for (var i = 0; i < binds.length; i++) binds[i].bind();
 })
+
+//Test change
