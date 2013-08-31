@@ -1,7 +1,7 @@
 if (!String.prototype.format) {
-    //source for format function: http://stackoverflow.com/a/4673436/694987
-    //currently unused, but matches C#'s usage. 
-    //ex: "{0} {0} {1} {2}".formatWith("zero", "one") -> "zero zero one {2}"
+//source for format function: http://stackoverflow.com/a/4673436/694987
+//currently unused, but matches C#'s usage. 
+//ex: "{0} {0} {1} {2}".formatWith("zero", "one") -> "zero zero one {2}"
     String.prototype.formatWith = function() {
         var args = arguments;
         return this.replace(/{(\d+)}/g, function(match, number) {
@@ -105,38 +105,119 @@ bindings.Binding.prototype.bind = function() {
  *              
  *  @param evtHandler
  *              The event handler function. This function accepts
- *              an event. If the handler is null, a default handler is
- *              provided.
+ *              an event.
  */
 bindings.TagBinding = function(hotkeys, startTag, endTag, evtHandler) {
+
+    this.defaultHandler = function(evt)
+    {
+        evt.preventDefault();
+        evt.stopPropagation();
+        var cursor = dic.editor.getCursor();
+        var textarea = dic.editor.getTextArea();
+        if (cursor.hasSelection())
+            wrapWithTags(cursor.getSelectionRange(), textarea);
+        else
+            insertTags(cursor, textarea);
+    };
+
     function addTag(textarea, position, tag) {
         if (tag)
             textarea.value = textarea.value.insert(tag, position);
     }
-    this.insertTags = function(cursor, textarea) {
+
+    function insertTags(cursor, textarea) {
         var position = cursor.getCursorPosition();
         addTag(textarea, position, startTag);
         position += startTag.length;
         addTag(textarea, position, endTag);
         cursor.move(position, position);
-    };
-    this.wrapWithTags = function(selectionRange, textarea) {
+    }
+
+    function wrapWithTags(selectionRange, textarea) {
         addTag(textarea, selectionRange.start, startTag);
         addTag(textarea, selectionRange.end + startTag.length, endTag);
-    };
-    bindings.Binding.call(this, 'keydown', hotkeys, this.evtHandler);
+    }
+
+    bindings.Binding.call(this, 'keydown', hotkeys, evtHandler || this.defaultHandler);
 };
 bindings.TagBinding.prototype = new bindings.Binding;
-bindings.TagBinding.evtHandler = function(evt) {
-    evt.preventDefault();
-    evt.stopPropagation();
-    var cursor = dic.editor.getCursor();
-    var textarea = dic.editor.getTextArea();
-    if (cursor.hasSelection())
-        wrapWithTags(cursor.getSelectionRange(), textarea);
-    else
-        insertTags(cursor, textarea);
+
+/**
+ * Inserts the member tag at the cursor for a specified hot key combination. 
+ * 
+ * @param hotkeys
+ *              The key combination for which the event and handler
+ *              is mapped to. E.g. 'space', 'ctrl-c', 'alt-ctrl-z'
+ */
+bindings.MemberTagBinding = function(hotkeys) {
+
+    function defaultHandler(evt) {
+    }
+
+    bindings.TagBinding.call(this, hotkeys, "[member='']", null,
+            defaultHandler);
+
+    var pHandler = this.defaultHandler;
+
+    function defaultHandler(evt)
+    {
+        pHandler.call(this, evt);
+        var cursor = dic.editor.getCursor();
+        var position = cursor.getCursorPosition();
+        cursor.move(position - 2, position - 2);
+        createDialog(findUsers());
+        $("#usr-tbl").dialog("open");
+    }
+
+    function findUsers()
+    {
+        users = [];
+        $("a.url.fn").each(function()
+        {
+            username = $(this).html();
+            if ($.inArray(username, users) === -1)
+                users.push(username);
+        });
+        return users;
+    }
+
+    function createDialog(users)
+    {
+        var html = "<div id=\"usr-tbl\"><fieldset id=\"usr-tbl-fld\">";
+        html += "</fieldset></div>";
+        $('body').append(html);
+        users.map(function(aUser)
+        {
+            var html = "<input type=\"button\" value=\"" + aUser + "\"/>";
+            $('#usr-tbl-fld').append(html);
+        });
+        $("#usr-tbl-fld :button").button();
+        $("#usr-tbl-fld :button").click(function()
+        {
+            $("#usr-tbl").dialog("close");
+            setUserAtCursor($(this).attr('value'));
+            $("#usr-tbl").remove();
+        });
+        $("#usr-tbl").dialog({
+            autoOpen: false,
+            height: 400,
+            width: 500,
+            modal: true
+        });
+    }
+
+    function setUserAtCursor(user)
+    {
+        var cursor = dic.editor.getCursor();
+        var position = cursor.getCursorPosition();
+        var textarea = dic.editor.getTextArea();
+        textarea.value = textarea.value.insert(user, position);
+        position += user.length + 2;
+        cursor.move(position, position);
+    }
 };
+bindings.MemberTagBinding.prototype = new bindings.TagBinding;
 
 /**
  * Replaces a specified character sequence or regular expression
@@ -156,6 +237,7 @@ bindings.TagBinding.evtHandler = function(evt) {
  *              The replacement sequence.
  */
 bindings.MacroBinding = function(hotkeys, macro, expand) {
+
     bindings.Binding.call(this, 'keyup', hotkeys,
             function(evt) {
                 evt.preventDefault();
@@ -169,34 +251,39 @@ bindings.MacroBinding = function(hotkeys, macro, expand) {
 bindings.MacroBinding.prototype = new bindings.Binding;
 
 /**
- * TODO
+ * Apply bindings to a text area when it's clicked.
  */
-bindings.MemberTagBinding = function(hotkeys) {
-    function evtHandler(evt) {
-        alert("here");
-        bindings.TagBinding.prototype.evtHandler.call(this);
-    }
-    bindings.TagBinding.call(this, hotkeys, "[member='']", null, evtHandler);
-};
-bindings.MemberTagBinding.prototype = new bindings.TagBinding;
+$(document).ready(function() {
+    var textareas = $('div .editor textarea');
+    if (textareas.length > 0)
+    {
+        dic.editor = new editors.Editor(textareas[0]);
+        var binds = [
+            new bindings.TagBinding('ctrl+i', '[i]', '[/i]'),
+            new bindings.TagBinding('ctrl+u', '[u]', '[/u]'),
+            new bindings.TagBinding('ctrl+k', '[il]', '[/il]'),
+            new bindings.TagBinding('ctrl+q', '[quote]', '[/quote]'),
+            new bindings.TagBinding('ctrl+l', '[url=]', '[/url]'),
+            new bindings.TagBinding('ctrl+p', '[img]', '[/img]'),
+            new bindings.TagBinding('ctrl+c', '[code]', '[/code]'),
+            new bindings.MemberTagBinding('ctrl+m'),
+            new bindings.MacroBinding('space', 'asap', 'as soon as possible'),
+            new bindings.MacroBinding('space', 'lol', 'laugh out loud'),
+            new bindings.MacroBinding('space', 'jtuts', '[url="http://docs.oracle.com/javase/tutorial/"]Java Tutorials[/url]')
+        ];
+        for (var i = 0; i < binds.length; i++)
+            binds[i].bind();
 
-/* Create the bindings */
-$(function() {
-    var tb = $('textarea[name=msgContent]');
-    dic.editor = new editors.Editor(tb[0]);
-    var binds = [
-        new bindings.TagBinding('ctrl+i', '[i]', '[/i]'),
-        new bindings.TagBinding('ctrl+u', '[u]', '[/u]'),
-        new bindings.TagBinding('ctrl+k', '[il]', '[/il]'),
-        new bindings.TagBinding('ctrl+q', '[quote]', '[/quote]'),
-        new bindings.TagBinding('ctrl+l', '[url=]', '[/url]'),
-        new bindings.TagBinding('ctrl+p', '[img]', '[/img]'),
-        new bindings.TagBinding('ctrl+c', '[code]', '[/code]'),
-        new bindings.MemberTagBinding('ctrl+m'),
-        new bindings.MacroBinding('space', 'asap', 'as soon as possible'),
-        new bindings.MacroBinding('space', 'lol', 'laugh out loud'),
-        new bindings.MacroBinding('space', 'jtuts', '[url="http://docs.oracle.com/javase/tutorial/"]Java Tutorials[/url]')
-    ];
-    for (var i = 0; i < binds.length; i++)
-        binds[i].bind();
+        $('div .editor textarea').each(function()
+        {
+            $(this).click(function()
+            {
+                dic.editor = new editors.Editor($(this).get(0));
+            });
+            $(this).trigger('click');
+        });
+    }
 });
+
+
+//TODO: onclick for edit button to detect dynamic editors

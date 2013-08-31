@@ -6,7 +6,8 @@
 	"content_scripts": [
 		{
 			"matches": ["*://*.dreamincode.net/*"],
-			"js": ["js/jQuery-2.0.3.js", "js/jquery.hotkeys.js", "js/dic.js"]
+			"js": ["js/jquery-2.0.3.js", "js/jquery.hotkeys.js", "js/jquery-ui.js", "js/dic.js"],
+                        "css": ["css/jquery-ui.css"]
 		}
 	]
 }
