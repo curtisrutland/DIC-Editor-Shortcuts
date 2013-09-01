@@ -288,6 +288,36 @@ bindings.MacroBinding = function(hotkeys, macro, expand) {
 bindings.MacroBinding.prototype = new bindings.Binding;
 
 /**
+ * A TabBinding moves the editor's cursor and the text in
+ * front of the cursor a specified number of spaces to the right.
+ * 
+ * @param spaces
+ *              The number of spaces to move the cursor to the right. 
+ *              If the number of spaces is negative, nothing happens.
+ *              
+ */
+bindings.TabBinding = function(spaces) {
+
+    this.defaultHandler = function(evt)
+    {
+        evt.preventDefault();
+        evt.stopPropagation();
+        if (spaces > 0)
+        {
+            var cursor = dic.editor.getCursor();
+            var position = cursor.getCursorPosition();
+            var textarea = dic.editor.getTextArea();
+            var blank = new Array(spaces).join(' ');
+            textarea.value = textarea.value.insert(blank, position);
+            cursor.move(position + spaces - 1, position + spaces - 1);
+        }
+    };
+    bindings.Binding.call(this, 'keydown', 'tab', this.defaultHandler);
+};
+bindings.TabBinding.prototype = new bindings.Binding;
+
+
+/**
  * 1. Create the bindings for local storage.
  * 2. Apply bindings to sole text editor on page if it exists
  * 3. When a dynamic editor is added (post edit), find it and add
@@ -304,8 +334,9 @@ $(document).ready(function() {
         new bindings.TagBinding('ctrl+q', '[quote]', '[/quote]'),
         new bindings.TagBinding('ctrl+l', "[url='']", '[/url]'),
         new bindings.TagBinding('ctrl+p', '[img]', '[/img]'),
-        new bindings.TagBinding('ctrl+s', '[code]', '[/code]'),
+        new bindings.TagBinding('alt+shift+c', '[code]', '[/code]'),
         new bindings.MemberTagBinding('ctrl+m'),
+        new bindings.TabBinding(5),
         new bindings.MacroBinding('space', 'asap', 'as soon as possible'),
         new bindings.MacroBinding('space', 'lol', 'laugh out loud'),
         new bindings.MacroBinding('space', 'jtuts', '[url="http://docs.oracle.com/javase/tutorial/"]Java Tutorials[/url]')
@@ -330,7 +361,7 @@ $(document).ready(function() {
 
     //(3)
     $(".post.entry-content").on('DOMNodeInserted', function(elem) {
-        if(elem.target.className === "ips_editor")
+        if (elem.target.className === "ips_editor")
             addEditorBindings();
     });
 
@@ -368,5 +399,8 @@ $(document).ready(function() {
 });
 
 //TODOs: 
+//      (0) Allow tabbing of selected text
 //      (1) Create options page where user can add bindings
 //      (2) When (1) is completed, get bindings from local storage
+//      (3) Finish README
+//      (4) Discuss uploading the extension as .crx file in repo
