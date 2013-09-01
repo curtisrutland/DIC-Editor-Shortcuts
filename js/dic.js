@@ -15,6 +15,27 @@ if (!String.prototype.format) {
 }
 
 var dic = (function () {
+	config = {
+		defaults: {
+			tabs: {
+				tabsEnabled: true,
+				useSpaces: false, //Not implemented yet
+				indention: 4 //Not implemented yet
+			}
+		},
+		settings: {
+
+		},
+		save: function() {
+			if (localStorage) localStorage.settings = JSON.stringify(this.settings);
+		},
+		reload: function() {
+			if (localStorage && localStorage.settings) this.settings = JSON.parse(localStorage.settings);
+			//Merge the values of settings into defaults and place the result in settings
+			this.settings = $.extend({}, this.defaults, this.settings);
+		}
+	};
+
     function namespace(name, parent) {
         parent = parent || dic;
         var namespaces = name.split('.');
@@ -26,8 +47,9 @@ var dic = (function () {
         return parent;
     }
     
-    return { 'namespace': namespace, editor: null };
+    return { 'config': config, 'namespace': namespace, editor: null };
 })();
+dic.config.reload();
 
 var editors = dic.namespace("editors");
 editors.Editor = function (textarea) {
@@ -44,55 +66,10 @@ editors.Cursor = function (textarea) {
     this.getSelectionRange = function () {
         return { 'start': textarea.selectionStart, 'end': textarea.selectionEnd };
     };
-    this.getCursorPosition = function() { return textarea.selectionStart; };
+    this.getPosition = function() { return textarea.selectionStart; };
 };
-
-var bindings = dic.namespace("editors.bindings");
-bindings.EditorBinding = function (hotkeys, startTag, endTag) {
-    this.onkeydown = function (evt) {
-        evt.preventDefault();
-        evt.stopPropagation();
-        var cursor = dic.editor.getCursor();
-        var textarea = dic.editor.getTextArea();
-        if (cursor.hasSelection()) wrapWithTags(cursor.getSelectionRange(), textarea);
-        else insertTags(cursor, textarea);
-    };
-
-    this.bind = function () {
-        var tb = $(dic.editor.getTextArea());
-        tb.bind('keydown', hotkeys, this.onkeydown);
-    };
-
-    function addTag(textarea, position, tag) {
-        textarea.value = textarea.value.insert(tag, position);
-    }
-
-    function insertTags(cursor, textarea) {
-        var position = cursor.getCursorPosition();
-        addTag(textarea, position, startTag);
-        position += startTag.length;
-        addTag(textarea, position, endTag);
-        cursor.move(position, position);
-    }
-
-    function wrapWithTags (selectionRange, textarea) {
-        addTag(textarea, selectionRange.start, startTag);
-        addTag(textarea, selectionRange.end + startTag.length, endTag);
-    };
-};
-
 
 $(function () {
     var tb = $('#fast-reply_textarea');
     dic.editor = new editors.Editor(tb[0]);
-    var binds = [
-	    new bindings.EditorBinding('ctrl+i', '[i]','[/i]'),
-	    new bindings.EditorBinding('ctrl+u', '[u]','[/u]'),
-	    new bindings.EditorBinding('ctrl+k', '[il]','[/il]'),
-	    new bindings.EditorBinding('ctrl+q', '[quote]','[/quote]'),
-	    new bindings.EditorBinding('ctrl+l', '[url=]','[/url]'),
-	    new bindings.EditorBinding('ctrl+p', '[img]','[/img]'),
-	    new bindings.EditorBinding('ctrl+c', '[code]','[/code]')
-    ];
-    for (var i = 0; i < binds.length; i++) binds[i].bind();
-})
+});
