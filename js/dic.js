@@ -1,5 +1,5 @@
 if (!String.prototype.format) {
-    
+
     //source for format function: http://stackoverflow.com/a/4673436/694987
     //currently unused, but matches C#'s usage. 
     //ex: "{0} {0} {1} {2}".formatWith("zero", "one") -> "zero zero one {2}"
@@ -10,15 +10,17 @@ if (!String.prototype.format) {
             return typeof args[number] !== 'undefined' ? args[number] : match;
         });
     };
-    
+
     String.prototype.insert = function(value, index) {
         return this.substring(0, index) + value + this.substring(index, this.length);
     };
 }
 
-/* Create namespaces */
+/**
+ * We define namespaces to avoid any naming conflicts.  
+ */
 var dic = (function() {
-    
+
     function namespace(name, parent) {
         parent = parent || dic;
         var namespaces = name.split('.');
@@ -28,49 +30,58 @@ var dic = (function() {
         }
         return parent;
     }
-    
     return {'namespace': namespace, editor: null};
 })();
-
 var editors = dic.namespace("editors");
 var bindings = dic.namespace("editors.bindings");
 
 /**
- * TODO
+ * An Editor contains a textarea and cursor.
+ * 
+ * @param textarea
+ *                  An HTML textarea element.
  */
 editors.Editor = function(textarea) {
     var cursor = new editors.Cursor(textarea);
-    
+
     this.getCursor = function() {
         return cursor;
     };
-    
+
     this.getTextArea = function() {
         return textarea;
     };
 };
 
+/**
+ * A Cursor represents a Editor's native cursor. It
+ * contains information on the native cursor position,
+ * and text selection ranges. It can also be moved.
+ * 
+ * @param textarea
+ *                  An HTML textarea element.
+ */
 editors.Cursor = function(textarea) {
     this.move = function(start, end) {
         textarea.selectionStart = start;
         textarea.selectionEnd = end;
     };
-    
+
     this.hasSelection = function() {
         return textarea.selectionStart !== textarea.selectionEnd;
     };
-    
+
     this.getSelectionRange = function() {
         return {'start': textarea.selectionStart, 'end': textarea.selectionEnd};
     };
-    
+
     this.getCursorPosition = function() {
         return textarea.selectionStart;
     };
 };
 
 /**
- *  A binding maps a hot key combination and event to a handler.
+ *  A Binding maps a hot key combination and event to a handler.
  *  
  *  @param type 
  *              The event type. E.g keyup, keydown, keypress
@@ -89,15 +100,14 @@ bindings.Binding = function(type, hotkeys, evtHandler) {
     this.hotkeys = hotkeys;
     this.evtHandler = evtHandler;
 };
-
 bindings.Binding.prototype.bind = function() {
     var tb = $(dic.editor.getTextArea());
     tb.bind(this.type, this.hotkeys, this.evtHandler);
 };
 
 /**
- * Inserts a set of open and closing tags at the cursor for a
- * specified hot key combination. If text is selected, the text
+ * A TagBinding inserts a set of open and closing tags at the cursor 
+ * for a specified hot key combination. If text is selected, the text
  * is wrapped in the tags.
  * 
  * @param hotkeys
@@ -162,16 +172,17 @@ bindings.TagBinding = function(hotkeys, startTag, endTag, evtHandler) {
 
     bindings.Binding.call(this, 'keydown', hotkeys, evtHandler || this.defaultHandler);
 };
-
 bindings.TagBinding.prototype = new bindings.Binding;
 
 /**
- * Inserts the member tag at the cursor for a specified hot key combination. 
- * TODO finish docs
+ * A MemberTagBinding inserts the member tag at the cursor for a specified hot 
+ * key combination. If text is selected, the tag is placed at the beginning 
+ * of the selection. In addition to inserting the tag, a dialog is displayed 
+ * where the user can select a DIC member whose name is placed in the tag value.
  * 
  * @param hotkeys
- *              The key combination for which the event and handler
- *              is mapped to. E.g. 'space', 'ctrl-c', 'alt-ctrl-z'
+ *              The key combination for which the event is mapped to. E.g. 
+ *              'space', 'ctrl-c', 'alt-ctrl-z'
  */
 bindings.MemberTagBinding = function(hotkeys) {
 
@@ -190,7 +201,7 @@ bindings.MemberTagBinding = function(hotkeys) {
         var hasSelection = cursor.hasSelection();
         pHandler.call(this, evt);
         var position = cursor.getCursorPosition() - 2;
-        if(hasSelection)
+        if (hasSelection)
             position = initCursorPosition + 9;
         cursor.move(position, position);
         createDialog(findUsers());
@@ -243,13 +254,12 @@ bindings.MemberTagBinding = function(hotkeys) {
         cursor.move(position, position);
     }
 };
-
 bindings.MemberTagBinding.prototype = new bindings.TagBinding;
 
 /**
- * Replaces a specified character sequence or regular expression
- * with another specified character sequence. All instances of the 
- * replaceable sequence are replaced.
+ * A MacroBinding replaces a specified character sequence or regular 
+ * expression with another specified character sequence. All instances of 
+ * the replaceable sequence are replaced.
  * 
  * @param hotkeys
  *              The key combination that invokes the replacement.
@@ -275,19 +285,24 @@ bindings.MacroBinding = function(hotkeys, macro, expand) {
             }
     );
 };
-
 bindings.MacroBinding.prototype = new bindings.Binding;
 
 /**
- * Apply bindings to a text area when it's clicked.
+ * 1. Create the bindings for local storage.
+ * 2. Apply bindings to sole text editor on page if it exists
+ * 3. When a dynamic editor is added (post edit), find it and add
+ *    the bindings. Also add a handler to make it the active editor 
+ *    when clicked.
  */
 $(document).ready(function() {
+
+    //(1)
     var binds = [
         new bindings.TagBinding('ctrl+i', '[i]', '[/i]'),
         new bindings.TagBinding('ctrl+u', '[u]', '[/u]'),
         new bindings.TagBinding('ctrl+k', '[il]', '[/il]'),
         new bindings.TagBinding('ctrl+q', '[quote]', '[/quote]'),
-        new bindings.TagBinding('ctrl+l', "[url=''']", '[/url]'),
+        new bindings.TagBinding('ctrl+l', "[url='']", '[/url]'),
         new bindings.TagBinding('ctrl+p', '[img]', '[/img]'),
         new bindings.TagBinding('ctrl+s', '[code]', '[/code]'),
         new bindings.MemberTagBinding('ctrl+m'),
@@ -295,27 +310,63 @@ $(document).ready(function() {
         new bindings.MacroBinding('space', 'lol', 'laugh out loud'),
         new bindings.MacroBinding('space', 'jtuts', '[url="http://docs.oracle.com/javase/tutorial/"]Java Tutorials[/url]')
     ];
-    var textarea = $('div .editor textarea')[0];
+
+    //(2)
+    var allEditors = [];
+    var elems = $('div .editor textarea');
+    var textarea = elems[0];
     if (textarea)
     {
         dic.editor = new editors.Editor(textarea);
+        allEditors.push(dic.editor);
         for (var i = 0; i < binds.length; i++)
             binds[i].bind();
+        elems.click(function()
+        {
+            dic.editor = findEditor(textarea);
+        });
+        elems.trigger('click');
+    }
+
+    //(3)
+    $(".post.entry-content").on('DOMNodeInserted', function(elem) {
+        if(elem.target.className === "ips_editor")
+            addEditorBindings();
+    });
+
+    function addEditorBindings()
+    {
+        var currEditor = dic.editor;
+        $('div .editor textarea').each(function()
+        {
+            var textarea = $(this).get(0);
+            if (!findEditor(textarea))
+            {
+                dic.editor = new editors.Editor(textarea);
+                allEditors.push(dic.editor);
+                for (var i = 0; i < binds.length; i++)
+                    binds[i].bind();
+                $(this).click(function()
+                {
+                    dic.editor = findEditor(textarea);
+                });
+            }
+        });
+        dic.editor = currEditor;
+    }
+
+    function findEditor(textarea)
+    {
+        var res = null;
+        allEditors.map(function(editor)
+        {
+            if (editor.getTextArea() === textarea)
+                res = editor;
+        });
+        return res;
     }
 });
 
-/*
- $('div .editor textarea').each(function()
- {
- textarea.click(function()
- {
- dic.editor = new editors.Editor($(this).get(0));
- });
- textarea.trigger('click');
- });
- */
-
-//TODO: only one text area on page load, so each() function above not needed
-//just define click for sole textarea
-//
-//TODO: onclick for edit button to detect dynamic editors
+//TODOs: 
+//      (1) Create options page where user can add bindings
+//      (2) When (1) is completed, get bindings from local storage
