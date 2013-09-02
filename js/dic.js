@@ -257,6 +257,49 @@ bindings.MemberTagBinding = function(hotkeys) {
 bindings.MemberTagBinding.prototype = new bindings.TagBinding;
 
 /**
+ * A URLTagBinding inserts URL tags at the cursor or around
+ * selected text. If text starting with 'http://' is copied 
+ * to the clipboard, it's inserted into tag url attribute value.
+ * 
+ * @param hotkeys
+ *              The key combination for which the event is mapped to. E.g. 
+ *              'space', 'ctrl-c', 'alt-ctrl-z'
+ */
+bindings.URLTagBinding = function(hotkeys) {
+
+    function defaultHandler(evt) {
+    }
+
+    bindings.TagBinding.call(this, hotkeys, "[url='']", '[/url]',
+            defaultHandler);
+
+    var pHandler = this.defaultHandler;
+
+    function defaultHandler(evt)
+    {
+        var cursor = dic.editor.getCursor();
+        var hasSelection = cursor.hasSelection();
+        var selectionRange = cursor.getSelectionRange();
+        var textLength = selectionRange.end - selectionRange.start;
+        pHandler.call(this, evt);
+        var position = cursor.getCursorPosition();
+        if (hasSelection)
+            position -= textLength + 8;
+        else
+            position -= 2;
+        cursor.move(position, position);
+        chrome.runtime.sendMessage({text: "urlBinding"}, function(response)
+        {
+            var textarea = dic.editor.getTextArea();
+            textarea.value = textarea.value.insert(response.val, position);
+            position = cursor.getCursorPosition();
+            cursor.move(position-6, position-6);
+        });
+    }
+};
+bindings.URLTagBinding.prototype = new bindings.TagBinding;
+
+/**
  * A MacroBinding replaces a specified character sequence or regular 
  * expression with another specified character sequence. All instances of 
  * the replaceable sequence are replaced.
@@ -318,7 +361,7 @@ bindings.TabBinding.prototype = new bindings.Binding;
 
 
 /**
- * 1. Create the bindings for local storage.
+ * 1. Create the bindings from local storage.
  * 2. Apply bindings to sole text editor on page if it exists
  * 3. When a dynamic editor is added (post edit), find it and add
  *    the bindings. Also add a handler to make it the active editor 
@@ -328,18 +371,18 @@ $(document).ready(function() {
 
     //(1)
     var binds = [
+        new bindings.TagBinding('ctrl+b', '[b]', '[/b]'),
         new bindings.TagBinding('ctrl+i', '[i]', '[/i]'),
         new bindings.TagBinding('ctrl+u', '[u]', '[/u]'),
         new bindings.TagBinding('ctrl+k', '[il]', '[/il]'),
         new bindings.TagBinding('ctrl+q', '[quote]', '[/quote]'),
-        new bindings.TagBinding('ctrl+l', "[url='']", '[/url]'),
         new bindings.TagBinding('ctrl+p', '[img]', '[/img]'),
         new bindings.TagBinding('alt+shift+c', '[code]', '[/code]'),
         new bindings.MemberTagBinding('ctrl+m'),
+        new bindings.URLTagBinding('ctrl+l'),
         new bindings.TabBinding(5),
         new bindings.MacroBinding('space', 'asap', 'as soon as possible'),
-        new bindings.MacroBinding('space', 'lol', 'laugh out loud'),
-        new bindings.MacroBinding('space', 'jtuts', '[url="http://docs.oracle.com/javase/tutorial/"]Java Tutorials[/url]')
+        new bindings.MacroBinding('space', 'lol', 'laugh out loud')
     ];
 
     //(2)
@@ -404,3 +447,4 @@ $(document).ready(function() {
 //      (2) When (1) is completed, get bindings from local storage
 //      (3) Finish README
 //      (4) Discuss uploading the extension as .crx file in repo
+//      (5) Add instructions in README for adding new bindings in the code
