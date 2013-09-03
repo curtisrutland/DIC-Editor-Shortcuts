@@ -293,7 +293,7 @@ bindings.URLTagBinding = function(hotkeys) {
             var textarea = dic.editor.getTextArea();
             textarea.value = textarea.value.insert(response.val, position);
             position = cursor.getCursorPosition();
-            cursor.move(position-6, position-6);
+            cursor.move(position - 6, position - 6);
         });
     }
 };
@@ -331,28 +331,36 @@ bindings.MacroBinding = function(hotkeys, macro, expand) {
 bindings.MacroBinding.prototype = new bindings.Binding;
 
 /**
- * A TabBinding moves the editor's cursor and the text in
- * front of the cursor a specified number of spaces to the right.
- * 
- * @param spaces
- *              The number of spaces to move the cursor to the right. 
- *              If the number of spaces is negative, nothing happens.
- *              
+ * A TabBinding tabs the editor's cursor and the text in
+ * front of the cursor to the right. If text is selected,
+ * the entire text selection is tabbed.
  */
-bindings.TabBinding = function(spaces) {
+bindings.TabBinding = function() {
 
     this.defaultHandler = function(evt)
     {
         evt.preventDefault();
         evt.stopPropagation();
-        if (spaces > 0)
+        var cursor = dic.editor.getCursor();
+        var position = cursor.getCursorPosition();
+        var textarea = dic.editor.getTextArea();
+        var hasSelection = cursor.hasSelection();
+        var selectionRange = cursor.getSelectionRange();
+        if (hasSelection)
         {
-            var cursor = dic.editor.getCursor();
-            var position = cursor.getCursorPosition();
-            var textarea = dic.editor.getTextArea();
-            var blank = new Array(spaces).join(' ');
-            textarea.value = textarea.value.insert(blank, position);
-            cursor.move(position + spaces - 1, position + spaces - 1);
+            var start = selectionRange.start;
+            var end = selectionRange.end;
+            var selectedText = textarea.value.substring(start, end);
+            var regex = new RegExp("(\\n\\t*)", 'g');
+            var tabbedText = "\t" + selectedText.replace(regex, "$1\t");
+            var newText = textarea.value.substring(0, start);
+            newText += tabbedText;
+            newText += textarea.value.substring(end);
+            textarea.value = newText;
+            cursor.move(position + 1, position + 1);
+        } else {
+            textarea.value = textarea.value.insert("\t", position);
+            cursor.move(position + 1, position + 1);
         }
     };
     bindings.Binding.call(this, 'keydown', 'tab', this.defaultHandler);
@@ -377,10 +385,10 @@ $(document).ready(function() {
         new bindings.TagBinding('ctrl+k', '[il]', '[/il]'),
         new bindings.TagBinding('ctrl+q', '[quote]', '[/quote]'),
         new bindings.TagBinding('ctrl+p', '[img]', '[/img]'),
-        new bindings.TagBinding('alt+shift+c', '[code]', '[/code]'),
+        new bindings.TagBinding('ctrl+shift+c', '[code]', '[/code]'),
         new bindings.MemberTagBinding('ctrl+m'),
         new bindings.URLTagBinding('ctrl+l'),
-        new bindings.TabBinding(5),
+        new bindings.TabBinding(),
         new bindings.MacroBinding('space', 'asap', 'as soon as possible'),
         new bindings.MacroBinding('space', 'lol', 'laugh out loud')
     ];
@@ -442,7 +450,6 @@ $(document).ready(function() {
 });
 
 //TODOs: 
-//      (0) Allow tabbing of selected text
 //      (1) Create options page where user can add bindings
 //      (2) When (1) is completed, get bindings from local storage
 //      (3) Finish README
