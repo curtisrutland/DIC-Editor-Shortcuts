@@ -186,13 +186,10 @@ bindings.TagBinding.prototype = new bindings.Binding;
  */
 bindings.MemberTagBinding = function(hotkeys) {
 
-    function defaultHandler(evt) {
-    }
-
     bindings.TagBinding.call(this, hotkeys, "[member='']", null,
             defaultHandler);
 
-    var pHandler = this.defaultHandler;
+    var pHandler = this.defaultHandler;    
 
     function defaultHandler(evt)
     {
@@ -204,16 +201,17 @@ bindings.MemberTagBinding = function(hotkeys) {
         if (hasSelection)
             position = initCursorPosition + 9;
         cursor.move(position, position);
-        createDialog(findUsers());
+        var users = findUsers();
+        createDialog(users);
         $("#usr-tbl").dialog("open");
     }
 
     function findUsers()
     {
-        users = [];
+        var users = [];
         $("a.url.fn").each(function()
         {
-            username = $(this).html();
+            var username = $(this).html();
             if ($.inArray(username, users) === -1)
                 users.push(username);
         });
@@ -222,13 +220,13 @@ bindings.MemberTagBinding = function(hotkeys) {
 
     function createDialog(users)
     {
-        var html = "<div id=\"usr-tbl\"><fieldset id=\"usr-tbl-fld\">";
-        html += "</fieldset></div>";
-        $('body').append(html);
+        var div = "<div id=\"usr-tbl\"><fieldset id=\"usr-tbl-fld\">";
+        div += "</fieldset></div>";
+        $('body').append(div);
         users.map(function(aUser)
         {
-            var html = "<input type=\"button\" value=\"" + aUser + "\"/>";
-            $('#usr-tbl-fld').append(html);
+            var input = "<input type=\"button\" value=\"" + aUser + "\"/>";
+            $('#usr-tbl-fld').append(input);
         });
         $("#usr-tbl-fld :button").button();
         $("#usr-tbl-fld :button").click(function()
@@ -257,7 +255,7 @@ bindings.MemberTagBinding = function(hotkeys) {
 bindings.MemberTagBinding.prototype = new bindings.TagBinding;
 
 /**
- * A URLTagBinding inserts URL tags at the cursor or around
+ * A UrlTagBinding inserts URL tags at the cursor or around
  * selected text. If text starting with 'http://' is copied 
  * to the clipboard, it's inserted into tag url attribute value.
  * 
@@ -265,10 +263,7 @@ bindings.MemberTagBinding.prototype = new bindings.TagBinding;
  *              The key combination for which the event is mapped to. E.g. 
  *              'space', 'ctrl-c', 'alt-ctrl-z'
  */
-bindings.URLTagBinding = function(hotkeys) {
-
-    function defaultHandler(evt) {
-    }
+bindings.UrlTagBinding = function(hotkeys) {
 
     bindings.TagBinding.call(this, hotkeys, "[url='']", '[/url]',
             defaultHandler);
@@ -297,7 +292,7 @@ bindings.URLTagBinding = function(hotkeys) {
         });
     }
 };
-bindings.URLTagBinding.prototype = new bindings.TagBinding;
+bindings.UrlTagBinding.prototype = new bindings.TagBinding;
 
 /**
  * A MacroBinding replaces a specified character sequence or regular 
@@ -387,7 +382,7 @@ $(document).ready(function() {
         new bindings.TagBinding('ctrl+p', '[img]', '[/img]'),
         new bindings.TagBinding('ctrl+shift+c', '[code]', '[/code]'),
         new bindings.MemberTagBinding('ctrl+m'),
-        new bindings.URLTagBinding('ctrl+l'),
+        new bindings.UrlTagBinding('ctrl+l'),
         new bindings.TabBinding(),
         new bindings.MacroBinding('space', 'asap', 'as soon as possible'),
         new bindings.MacroBinding('space', 'lol', 'laugh out loud')
@@ -421,28 +416,28 @@ $(document).ready(function() {
         var currEditor = dic.editor;
         $('div .editor textarea').each(function()
         {
-            var textarea = $(this).get(0);
-            if (!findEditor(textarea))
+            var ta = $(this).get(0);
+            if (!findEditor(ta))
             {
-                dic.editor = new editors.Editor(textarea);
+                dic.editor = new editors.Editor(ta);
                 allEditors.push(dic.editor);
-                for (var i = 0; i < binds.length; i++)
-                    binds[i].bind();
+                for (var j = 0; j < binds.length; j++)
+                    binds[j].bind();
                 $(this).click(function()
                 {
-                    dic.editor = findEditor(textarea);
+                    dic.editor = findEditor(ta);
                 });
             }
         });
         dic.editor = currEditor;
     }
 
-    function findEditor(textarea)
+    function findEditor(ta)
     {
         var res = null;
         allEditors.map(function(editor)
         {
-            if (editor.getTextArea() === textarea)
+            if (editor.getTextArea() === ta)
                 res = editor;
         });
         return res;
