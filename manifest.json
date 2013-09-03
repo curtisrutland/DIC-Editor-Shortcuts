@@ -1,12 +1,17 @@
 {
-	"name": "Dream.In.Code Editor Hotkeys",
-	"version": "0.1",
-	"manifest_version": 2,
-	"description": "A user script for keyboard shortcuts in the DIC editor",
-	"content_scripts": [
-		{
-			"matches": ["*://*.dreamincode.net/*"],
-			"js": ["js/jQuery-2.0.3.js", "js/jquery.hotkeys.js", "js/dic.js"]
-		}
-	]
+    "name": "Dream.In.Code Editor Hotkeys",
+    "version": "0.1",
+    "manifest_version": 2,
+    "description": "A user script for keyboard shortcuts in the DIC editor",
+    "permissions": ["clipboardRead"],
+    "content_scripts": [
+        {
+            "matches": ["*://*.dreamincode.net/*"],
+            "js": ["js/jquery-2.0.3.js", "js/jquery.hotkeys.js", "js/jquery-ui.js", "js/dic.js"],
+            "css": ["css/jquery-ui.css"]
+        }
+    ],
+    "background": {
+        "page": "background.html"
+    }
 }
