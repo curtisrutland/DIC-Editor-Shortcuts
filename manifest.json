@@ -16,6 +16,6 @@
         }
     ],
     "background": {
-        "page": "background.html"
+        "page": "html/background.html"
     }
 }
