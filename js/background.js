@@ -6,7 +6,7 @@ chrome.runtime.onMessage.addListener(
 			$("#clipboard").focus();
 			document.execCommand('paste');
 			var contents = $("#clipboard").val();
-			if(contents.match("^http://"))
+			if(contents.match("^https?://"))
 				sendResponse({val: contents});
 		}
 	}
